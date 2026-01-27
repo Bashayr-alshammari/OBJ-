@@ -1,0 +1,150 @@
+maude tool: 'maude'
+ checking version: 3.1. OK.
+ checking installation: OK.
+[Theory hecc_ascon_protocol] Theory loaded
+[Theory hecc_ascon_protocol] Theory translated
+[Theory hecc_ascon_protocol] Derivation checks started
+[Theory hecc_ascon_protocol] Derivation checks ended
+[Theory hecc_ascon_protocol] Theory closed
+theory hecc_ascon_protocol begin
+
+// Function signature and definition of the equational theory E
+
+functions: adec/2, aenc/2, fst/1, pair/2, pk/1, sdec/2, senc/2, snd/1
+equations:
+    adec(aenc(x.1, pk(x.2)), x.2) = x.1,
+    fst(<x.1, x.2>) = x.1,
+    sdec(senc(x.1, x.2), x.2) = x.1,
+    snd(<x.1, x.2>) = x.2
+
+
+
+
+
+
+
+
+
+rule (modulo E) Setup_ReaderKeys:
+   [ Fr( ~skR ) ]
+  -->
+   [ !PrivKey( $R, ~skR ), !PubKey( $R, pk(~skR) ), Out( pk(~skR) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Tag_Generate:
+   [ Fr( ~SK ), !PubKey( $R, pkR ) ]
+  --[ Tag_Generates( $T, $R, ~SK ) ]->
+   [ TagState( $T, $R, ~SK ), Out( aenc(<$T, ~SK>, pkR) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader_Receive_SK:
+   [ In( aenc(<$T, SK>, pk(~skR)) ), !PrivKey( $R, ~skR ) ]
+  --[ Reader_Begin( $R, $T ), Reader_Accepts( $R, $T, SK ) ]->
+   [ ReaderState( $R, $T, SK ), Out( senc('ack', SK) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Tag_Process_ACK_and_Confirm:
+   [ TagState( $T, $R, SK ), In( senc('ack', SK) ) ]
+  --[ Tag_End( $T, $R ) ]->
+   [ Out( senc('conf', SK) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader_Finalize:
+   [ ReaderState( $R, $T, SK ), In( senc('conf', SK) ) ]
+  --[ Reader_End( $R, $T ) ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+lemma secrecy_SK:
+  all-traces
+  "∀ R T SK #i #j.
+    ((Tag_End( T, R ) @ #i) ∧ (Reader_Accepts( R, T, SK ) @ #j)) ⇒
+    (¬(∃ #k. K( SK ) @ #k))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ R T SK #i #j.
+  (Tag_End( T, R ) @ #i) ∧ (Reader_Accepts( R, T, SK ) @ #j)
+ ∧
+  ∃ #k. (K( SK ) @ #k)"
+*/
+by sorry
+
+lemma auth_tag_to_reader:
+  all-traces
+  "∀ R T SK #i.
+    (Tag_End( T, R ) @ #i) ⇒
+    (∃ #j. (Reader_Accepts( R, T, SK ) @ #j) ∧ (#j < #i))"
+/*
+conversion to guarded formula failed:
+  unguarded variable(s) 'SK' in the subformula
+    "∀ R T SK #i.
+      (Tag_End( T, R ) @ #i) ⇒
+      (∃ #j. (Reader_Accepts( R, T, SK ) @ #j) ∧ (#j < #i))"
+  in the formula
+    "∀ R T SK #i.
+      (Tag_End( T, R ) @ #i) ⇒
+      (∃ #j. (Reader_Accepts( R, T, SK ) @ #j) ∧ (#j < #i))"
+*/
+by sorry
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+WARNING: the following wellformedness checks failed!
+
+ Formula guardedness
+====================
+
+  lemma `auth_tag_to_reader' cannot be converted to a guarded formula:
+    unguarded variable(s) 'SK' in the subformula
+      "∀ R T SK #i.
+        (Tag_End( T, R ) @ #i) ⇒
+        (∃ #j. (Reader_Accepts( R, T, SK ) @ #j) ∧ (#j < #i))"
+    in the formula
+      "∀ R T SK #i.
+        (Tag_End( T, R ) @ #i) ⇒
+        (∃ #j. (Reader_Accepts( R, T, SK ) @ #j) ∧ (#j < #i))"
+*/
+
+/*
+Generated from:
+Tamarin version 1.10.0
+Maude version 3.1
+Git revision: cb62c305f8c8b8c1e664152aa33c95b7b8d5ef32, branch: master
+Compiled at: 2024-10-30 11:11:02.432289291 UTC
+*/
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: formal/tamarin/hecc_ascon_protocol.spthy
+
+  processing time: 0.48s
+  
+  WARNING: 1 wellformedness check failed!
+  
+  secrecy_SK (all-traces): analysis incomplete (1 steps)
+  auth_tag_to_reader (all-traces): analysis incomplete (1 steps)
+
+==============================================================================

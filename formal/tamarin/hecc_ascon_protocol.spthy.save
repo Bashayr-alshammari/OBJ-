@@ -1,0 +1,61 @@
+theory hecc_ascon_protocol
+begin
+
+functions
+  pk/1,
+  aenc/2, adec/2,
+  senc/2, sdec/2,
+  pair/2, fst/1, snd/1
+
+equations
+  adec(aenc(m, pk(sk)), sk) = m
+  sdec(senc(m, k), k) = m
+  fst(pair(x,y)) = x
+  snd(pair(x,y)) = y
+
+/* Setup: Reader long-term key */
+rule Setup_ReaderKeys:
+  [ Fr(skR) ]
+  -->
+  [ !PrivKey(r, skR), !PubKey(r, pk(skR)), Out(pk(skR)) ]
+
+/* Tag generates SK and sends it encrypted to Reader, including Tag identity */
+rule Tag_Generate:
+  [ Fr(SK), !PubKey(r, pkR) ]
+  --[ Tag_Generates(t, SK) ]->
+  [ TagState(t, SK), Out(aenc(pair(t, SK), pkR)) ]
+
+/* Reader recovers (t,SK), accepts, and replies with ACK under SK */
+rule Reader_Receive_SK:
+  [ In(aenc(pair(t, SK), pk(skR))), !PrivKey(r, skR) ]
+  --[ Reader_Begin(r, t), Reader_Accepts(r, t, SK) ]->
+  [ ReaderState(r, t, SK), Out(senc(ack, SK)) ]
+
+/* Tag finishes and sends confirmation under SK */
+rule Tag_Process_ACK_and_Confirm:
+  [ TagState(t, SK), In(senc(ack, SK)) ]
+  --[ Tag_End(t, r) ]->
+  [ Out(senc(conf, SK)) ]
+
+/* Reader finalizes */
+rule Reader_Finalize:
+  [ ReaderState(r, t, SK), In(senc(conf, SK)) ]
+  --[ Reader_End(r, t) ]->
+  [ ]
+
+/* --- Lemmas --- */
+
+/* Secrecy of SK for completed sessions */
+lemma secrecy_SK:
+  "All T R SK #i.
+     (Reader_Accepts(R, T, SK) @ i)
+     ==> not (Ex #k. K(SK) @ k)"
+
+/* If Tag ends with R, then R must have begun with that Tag */
+lemma auth_tag_to_reader:
+  "All T R #i.
+     (Tag_End(T,R) @ i)
+     ==> (Ex #j. Reader_Begin(R,T) @ j & j < i)"
+
+end
+

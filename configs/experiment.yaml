@@ -1,0 +1,7 @@
+sizes_kb: [1, 4, 16, 32, 50]
+scenarios: [baseline, ransomware, mitigation]
+concurrency: [1, 5, 10]
+runs_per_cell: 300
+nonce_policy: counter   # counter | random
+aad_policy: tag_uid_reader_id
+output_dir: data/logs

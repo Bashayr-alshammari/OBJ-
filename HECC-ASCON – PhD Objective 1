@@ -1,0 +1,18 @@
+# HECC-ASCON – PhD Objective 1
+
+This repository contains the formal verification and performance evaluation
+code for **Objective 1** of my PhD research.
+
+## Contents
+- `formal/` – ProVerif and Tamarin models
+- `code/runner/` – Python performance evaluation scripts
+- `results/` – Experimental outputs (CSV, logs)
+
+## Objective
+Lightweight authenticated key establishment using HECC and ASCON
+for constrained IoT environments.
+
+## Reproducibility
+All experiments can be reproduced using:
+```bash
+python3 code/runner/run_experiment.py

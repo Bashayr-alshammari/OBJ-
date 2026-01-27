@@ -1,0 +1,148 @@
+(* ProVerif model: Objective 1 (HECC + ASCON abstraction) *)
+
+free c : channel.
+
+(* --- ASCON as ideal symmetric encryption --- *)
+fun asconEnc(bitstring, bitstring) : bitstring.
+reduc asconDec(asconEnc(m,k), k) = m.
+
+(* --- Public-key encryption (Reader) --- *)
+fun pk(bitstring) : bitstring.
+fun aenc(bitstring, bitstring) : bitstring.
+reduc adec(aenc(m, pk(sk)), sk) = m.
+
+(* --- Abstract HECC/DH shared secret + KDF --- *)
+fun dh(bitstring, bitstring) : bitstring.
+fun H(bitstring) : bitstring.
+
+(* Pairing *)
+fun pair(bitstring, bitstring) : bitstring.
+
+(* --- Identities and secrets --- *)
+free PID_T1 : bitstring.
+free PID_T2 : bitstring.
+free PID_R  : bitstring.
+free D      : bitstring.
+free K_TA   : bitstring [private].
+free secretTag : bitstring [private].
+
+free xT1 : bitstring [private].
+free xT2 : bitstring [private].
+free skR : bitstring [private].   (* IMPORTANT: private! *)
+free SK_LABEL : bitstring.
+free ACK : bitstring.
+free CONF : bitstring.
+
+(* --- Events --- *)
+event TagStart(bitstring, bitstring).        (* PID_T, NT *)
+event TagEnd(bitstring, bitstring).          (* PID_T, NT *)
+event ReaderBegin(bitstring, bitstring).     (* PID_R, PID_T *)
+event ReaderEnd(bitstring, bitstring).       (* PID_R, PID_T *)
+event IssueSK(bitstring, bitstring).         (* PID_T, SK *)
+event ReaderAccept(bitstring, bitstring, bitstring). (* PID_R, PID_T, SK *)
+
+(* --- Tag1 process --- *)
+let Tag1 =
+  !(
+    new NT: bitstring;
+    in(c, NR: bitstring);
+
+    let ET  = dh(xT1, D) in
+    let KTi = H(pair(pair(ET, NR), pair(NT, K_TA))) in
+    let SK  = H(pair(SK_LABEL, KTi)) in
+
+    let AuthT = asconEnc(pair(pair(PID_T1, NT), NR), KTi) in
+
+    out(c, pair(pair(PID_T1, ET), AuthT));
+    event TagStart(PID_T1, NT);
+
+    in(c, ackEnc: bitstring);
+    if asconDec(ackEnc, SK) = ACK then
+      ( event TagEnd(PID_T1, NT);
+        out(c, asconEnc(CONF, SK))
+      )
+    else 0
+  ).
+
+(* --- Tag2 process --- *)
+let Tag2 =
+  !(
+    new NT: bitstring;
+    in(c, NR: bitstring);
+
+    let ET  = dh(xT2, D) in
+    let KTi = H(pair(pair(ET, NR), pair(NT, K_TA))) in
+    let SK  = H(pair(SK_LABEL, KTi)) in
+
+    let AuthT = asconEnc(pair(pair(PID_T2, NT), NR), KTi) in
+
+    out(c, pair(pair(PID_T2, ET), AuthT));
+    event TagStart(PID_T2, NT);
+
+    in(c, ackEnc: bitstring);
+    if asconDec(ackEnc, SK) = ACK then
+       ( event TagEnd(PID_T2, NT);
+        out(c, asconEnc(CONF, SK))
+       )
+    else 0
+  ).  
+(* --- Reader process --- *)
+let Reader =
+  !(
+    new NR: bitstring;
+    out(c, NR);
+
+    in(c, msg: bitstring);
+    let (p1, AuthT) = msg in
+    let (PID_T, ET) = p1 in
+
+    event ReaderBegin(PID_R, PID_T);
+
+    out(c, pair(pair(PID_T, ET), AuthT));
+
+    in(c, verToken: bitstring);
+
+    let x = adec(verToken, skR) in
+    let (st, SK) = x in
+    
+    if st = secretTag then
+      ( event ReaderAccept(PID_R, PID_T, SK);
+        out(c, asconEnc(ACK, SK));
+        in(c, confEnc: bitstring);
+        if asconDec(confEnc, SK) = CONF then
+          event ReaderEnd(PID_R, PID_T)
+        else 0
+      )
+    else 0
+  ).
+
+(* --- TA process --- *)
+let TA =
+  !(
+    in(c, fwd: bitstring);
+    let (p1, AuthT) = fwd in
+    let (PID_T, ET) = p1 in
+
+    new SK_new: bitstring;
+    event IssueSK(PID_T, SK_new);
+    out(c, aenc(pair(secretTag,SK_new), pk(skR)))
+  ).
+
+process
+  ( out(c, pk(skR))
+  | Tag1
+  | Tag2
+  | Reader
+  | TA
+  ).
+
+(* --- Queries --- *)
+
+query attacker(SK).
+
+(* Q2) Authentication: if a Tag ends, the Reader began for the same PID *)
+query event(TagEnd(PID,NT)) ==> event(ReaderBegin(PID_R, PID)).
+
+(* Q3) Agreement: if Reader accepts SK for PID, then TA issued the same SK for PID *)
+query event(ReaderAccept(PID_R, PID, SK)) ==> event(IssueSK(PID,SK)).
+

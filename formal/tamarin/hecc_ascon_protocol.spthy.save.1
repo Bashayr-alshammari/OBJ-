@@ -1,0 +1,63 @@
+theory hecc_ascon_protocol
+begin
+
+builtins: asymmetric-encryption, symmetric-encryption
+
+/* --- Rules --- */
+
+/* Setup: generate Reader's private key and publish its public key */
+rule Setup_ReaderKeys:
+  [ Fr(~skR) ]
+  -->
+  [ !PrivKey($R, ~skR)
+  , !PubKey($R, pk(~skR))
+  , Out(pk(~skR))
+  ]
+
+/* Tag generates session key SK and sends it encrypted to Reader, including Tag identity */
+rule Tag_Generate:
+  [ Fr(~SK), !PubKey($R, pkR) ]
+  --[ Tag_Generates($T, $R, ~SK) ]->
+  [ TagState($T, $R, ~SK)
+  , Out(aenc(<$T, ~SK>, pkR))
+  ]
+
+/* Reader receives encrypted (T,SK), accepts, and sends ACK encrypted under SK */
+rule Reader_Receive_SK:
+  [ In(aenc(<$T, SK>, pk(~skR))), !PrivKey($R, ~skR) ]
+  --[ Reader_Begin($R, $T), Reader_Accepts($R, $T, SK) ]->
+  [ ReaderState($R, $T, SK)
+  , Out(senc('ack', SK))
+  ]
+
+/* Tag receives ACK, then sends CONF under SK */
+rule Tag_Process_ACK_and_Confirm:
+  [ TagState($T, $R, SK), In(senc('ack', SK)) ]
+  --[ Tag_End($T, $R) ]->
+  [ Out(senc('conf', SK)) ]
+
+/* Reader receives CONF and finalizes */
+rule Reader_Finalize:
+  [ ReaderState($R, $T, SK), In(senc('conf', SK)) ]
+  --[ Reader_End($R, $T) ]->
+  [ ]
+
+
+/* --- Security Properties (Lemmas) --- */
+
+/* Secrecy of session key for accepted sessions */
+lemma secrecy_SK:
+  "All R T #i #j.
+     (Tag_End(T,R) @ #i & Reader_Accepts(R,T,SK) @ #j)
+     ==> not (Ex #k. K(SK) @ #k)"
+
+
+/* Authentication: if Tag ends with R, then R must have begun with that Tag earlier */
+lemma auth_tag_to_reader:
+  "All R T #i.
+     (Tag_End(T, R) @ #i)
+     ==> (Ex #j. Reader_Accepts(R, T) @ #j & #j < #i)"
+
+
+end
+
