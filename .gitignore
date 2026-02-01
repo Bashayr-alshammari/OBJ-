@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Logs / large artifacts
+data/logs/
+results/figures/*.png
+*.csv
+
+# Tamarin / ProVerif outputs
+tamarin_out.txt
+*_out.txt
+
+# OS / editor
+.DS_Store
+.vscode/
