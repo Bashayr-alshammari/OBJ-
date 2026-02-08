@@ -1,10 +1,3 @@
- Excellent — this is the **right moment** to upgrade the repository into a **Q1-journal-grade, reviewer-proof research artifact**.
-
-Below is a **ready-to-paste, journal-grade `README.md`**, written in **academic tone**, aligned with **WoS Q1 expectations**, and consistent with **Objective 1 (HECC + ASCON)**.
-
-You can paste it **directly** into `README.md` and commit.
-
----
 
 # 🔐 HECC–ASCON Lightweight Security Framework
 
@@ -223,6 +216,7 @@ See `LICENSE` for details.
 * ✔ Reproducible experiments
 * ✔ Clear threat model
 * ✔ Clean repository structure
+
 
 
 
