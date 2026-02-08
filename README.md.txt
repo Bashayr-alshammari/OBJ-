@@ -194,10 +194,9 @@ When published, citation details will be updated here.
 
 ## 👩‍🎓 Author
 
-**Dr. Fatma Foad Alhashmi Ashrif**
-Lecturer & Researcher
-College of Computing & Informatics
-Sebha University, Libya
+**Bashayr Alshammari**
+Lecturer at Northern Border University & Ph.D candidate at University Sains Malaysia
+
 
 Research Areas:
 
@@ -215,14 +214,7 @@ See `LICENSE` for details.
 
 ---
 
-## 📬 Contact
 
-For academic collaboration, replication questions, or reviewer access:
-
-📧 *[add professional email if desired]*
-🔗 GitHub: [https://github.com/fatalshareef-code](https://github.com/fatalshareef-code)
-
----
 
 ### ✅ Reviewer-Ready Checklist
 
@@ -231,5 +223,6 @@ For academic collaboration, replication questions, or reviewer access:
 * ✔ Reproducible experiments
 * ✔ Clear threat model
 * ✔ Clean repository structure
+
 
 
